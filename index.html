@@ -102,6 +102,9 @@ td{padding:8px 10px;border-bottom:1px solid var(--bd)}
 .url-status.ok{color:var(--green)}.url-status.err{color:var(--red)}
 .btn-row{display:flex;gap:10px;margin-top:14px}
 .screen-loading{padding:80px 0;text-align:center;color:var(--tx3);font-size:14px}
+.ex-row{display:flex;gap:8px;margin-top:5px}
+.exb{flex:1;padding:9px;border:1px solid var(--bd2);border-radius:var(--rsm);background:transparent;color:var(--tx2);font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s;text-align:center}
+.exb.on{border-color:var(--green-bd);background:var(--green-bg);color:var(--green);font-weight:500}
 </style>
 </head>
 <body>
@@ -114,10 +117,11 @@ td{padding:8px 10px;border-bottom:1px solid var(--bd)}
       <h2>Connect your Google Sheet</h2>
       <p class="setup-intro">Your data lives in a Google Sheet you control — visible, editable, and accessible from any device.</p>
       <div class="setup-box">
-        <div class="setup-step"><span class="snum">1</span><span>Create a new <a class="alink" href="https://sheets.google.com" target="_blank">Google Sheet</a> and name it (e.g. "Health tracker").</span></div>
-        <div class="setup-step"><span class="snum">2</span><span>Open <strong>Extensions &rarr; Apps Script</strong>. Delete all existing code and paste in the <strong>apps_script.js</strong> file provided alongside this file.</span></div>
-        <div class="setup-step"><span class="snum">3</span><span>Click <strong>Deploy &rarr; New deployment</strong>. Select type: <strong>Web app</strong>. Set "Execute as" to <strong>Me</strong> and "Who has access" to <strong>Anyone</strong>. Click Deploy and authorise when prompted.</span></div>
-        <div class="setup-step"><span class="snum">4</span><span>Copy the deployment URL (starts with <code style="font-size:11px">https://script.google.com/macros/s/</code>) and paste it below.</span></div>
+        <div class="setup-step"><span class="snum">1</span><span>Create a new <a class="alink" href="https://sheets.google.com" target="_blank">Google Sheet</a> and name it (e.g. "Health tracker &mdash; [your name]").</span></div>
+        <div class="setup-step"><span class="snum">2</span><span>Open <strong>Extensions &rarr; Apps Script</strong>. Click "Untitled project" at the top and rename it to <strong>Health Tracker</strong>. Then delete all existing code and paste in the <strong>apps_script.js</strong> file provided alongside this file.</span></div>
+        <div class="setup-step"><span class="snum">3</span><span>Click <strong>Deploy &rarr; New deployment</strong>. Select type: <strong>Web app</strong>. Set "Execute as" to <strong>Me</strong> and "Who has access" to <strong>Anyone</strong>. Click Deploy and copy the URL that appears.</span></div>
+        <div class="setup-step"><span class="snum">4</span><span><strong>Authorise the script.</strong> Paste the URL into a browser tab and press enter. Click <strong>Review Permissions</strong>, select your Google account, then click <strong>Advanced &rarr; Go to Health Tracker (unsafe)</strong> and click <strong>Allow</strong>. You should see raw data in the browser &mdash; that means it&rsquo;s working.</span></div>
+        <div class="setup-step"><span class="snum">5</span><span>Come back here, paste the deployment URL below, click <strong>Test</strong> then <strong>Connect</strong>.</span></div>
       </div>
       <div class="fld" style="margin-bottom:4px">
         <label for="inp-url">Apps Script deployment URL</label>
@@ -158,6 +162,13 @@ td{padding:8px 10px;border-bottom:1px solid var(--bd)}
           <button class="fqb" data-fq="1">Clean</button>
           <button class="fqb s2" data-fq="2">Normal</button>
           <button class="fqb" data-fq="3">Off-plan</button>
+        </div>
+      </div>
+      <div class="fld" style="margin-bottom:14px">
+        <label>Exercise today</label>
+        <div class="ex-row">
+          <button class="exb" id="ex-cardio" data-ex="cardio">Cardio</button>
+          <button class="exb" id="ex-weights" data-ex="weights">Weights</button>
         </div>
       </div>
       <div class="fld" style="margin-bottom:14px">
@@ -227,7 +238,7 @@ td{padding:8px 10px;border-bottom:1px solid var(--bd)}
 'use strict';
 var URL_KEY='ht_sheet_url';
 var D={entries:[],goals:{target:80,baseWaist:null}};
-var fq=2, _tt=null, scriptUrl='';
+var fq=2, cardio=false, weights=false, _tt=null, scriptUrl='';
 
 function show(id){
   ['s-load','s-setup','s-app'].forEach(function(s){
@@ -263,6 +274,9 @@ function clearForm(){
   document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
   ['f-weight','f-sleep','f-steps','f-waist','f-notes'].forEach(function(id){document.getElementById(id).value='';});
   setFQ(2);
+  cardio=false;weights=false;
+  document.getElementById('ex-cardio').className='exb';
+  document.getElementById('ex-weights').className='exb';
 }
 
 function showTab(id){
@@ -395,9 +409,9 @@ function renderHistory(){
   var rows=[].concat(cd).reverse().map(function(e){
     var bc=e.foodQuality===1?'b1':e.foodQuality===3?'b3':'b2';
     var bl=e.foodQuality===1?'Clean':e.foodQuality===3?'Off-plan':'Normal';
-    return '<tr><td class="tm">'+e.date.slice(5)+'</td><td class="tn">'+e.weight+'</td><td class="ta">'+e.a7+'</td><td class="tm">'+(e.sleep!=null?e.sleep+'h':'&mdash;')+'</td><td class="tm">'+(e.steps!=null?e.steps.toLocaleString():'&mdash;')+'</td><td><span class="badge '+bc+'">'+bl+'</span></td><td class="tm">'+(e.waist!=null?e.waist:'&mdash;')+'</td><td><button class="dbtn" data-d="'+e.date+'" aria-label="Delete '+e.date+'">&times;</button></td></tr>';
+    return '<tr><td class="tm">'+e.date.slice(5)+'</td><td class="tn">'+e.weight+'</td><td class="ta">'+e.a7+'</td><td class="tm">'+(e.sleep!=null?e.sleep+'h':'&mdash;')+'</td><td class="tm">'+(e.steps!=null?e.steps.toLocaleString():'&mdash;')+'</td><td><span class="badge '+bc+'">'+bl+'</span></td><td class="tm">'+(e.waist!=null?e.waist:'&mdash;')+'</td><td class="tm" style="color:var(--green)">'+(e.cardio?'\u2713':'&mdash;')+'</td><td class="tm" style="color:var(--green)">'+(e.weights?'\u2713':'&mdash;')+'</td><td><button class="dbtn" data-d="'+e.date+'" aria-label="Delete '+e.date+'">&times;</button></td></tr>';
   }).join('');
-  tbl.innerHTML='<table><thead><tr><th>Date</th><th>Weight</th><th>Avg</th><th>Sleep</th><th>Steps</th><th>Food</th><th>Waist</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+  tbl.innerHTML='<table><thead><tr><th>Date</th><th>Weight</th><th>Avg</th><th>Sleep</th><th>Steps</th><th>Food</th><th>Waist</th><th>Cardio</th><th>Weights</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
   tbl.querySelectorAll('.dbtn').forEach(function(b){
     b.addEventListener('click',function(){doDelete(b.dataset.d);});
   });
@@ -553,6 +567,12 @@ async function testUrl(url){
   document.querySelectorAll('.fqb').forEach(function(b){
     b.addEventListener('click',function(){setFQ(parseInt(b.dataset.fq));});
   });
+  document.querySelectorAll('.exb').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(b.dataset.ex==='cardio'){cardio=!cardio;b.className='exb'+(cardio?' on':'');}
+      else{weights=!weights;b.className='exb'+(weights?' on':'');}
+    });
+  });
 
   document.getElementById('btn-save').addEventListener('click',async function(){
     var date=document.getElementById('f-date').value;
@@ -566,7 +586,9 @@ async function testUrl(url){
       sleep:sl!==''?parseFloat(sl):null,
       steps:st!==''?parseInt(st,10):null,
       waist:wa!==''?parseFloat(wa):null,
-      notes:document.getElementById('f-notes').value.trim()
+      notes:document.getElementById('f-notes').value.trim(),
+      cardio:cardio,
+      weights:weights
     });
     clearForm();
   });
